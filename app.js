@@ -1,8 +1,9 @@
 /**
- * School of Fish / Boids Simulation — Minimalist Toroidal Edition
+ * School of Fish / Boids Simulation — Minimalist Toroidal Edition with Diverse Boid Archetypes
  * Features:
+ * - Varied boid archetypes (Scouts, Cruisers, Leaders/Elders) with diverse masses, sizes, turn agilities, and silhouettes
  * - Toroidal screen wrapping (seamless boundary wrapping with periodic distance math)
- * - Minimalist aesthetic: sleek geometric boid silhouettes, clean obstacles, muted monochrome/slate palette
+ * - Minimalist aesthetic: sleek geometric silhouettes, clean circular obstacles, muted monochrome/slate tones
  * - Couzin 3-tier zones (Repulsion, Orientation, Attraction) + rear blind spot
  */
 (() => {
@@ -125,7 +126,6 @@
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
 
-      // Clean, understated circular barrier
       ctx.beginPath();
       ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
@@ -134,7 +134,6 @@
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Inner subtle anchor dot
       ctx.beginPath();
       ctx.arc(0, 0, 2, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
@@ -167,7 +166,6 @@
 
     update(w, h) {
       this.pos.add(this.vel);
-      // Toroidal wrap for food
       if (this.pos.x < 0) this.pos.x += w;
       else if (this.pos.x > w) this.pos.x -= w;
       if (this.pos.y < 0) this.pos.y += h;
@@ -185,29 +183,53 @@
   }
 
   // ==========================================
-  // 4. Minimalist Boid Entity
+  // 4. Heterogeneous Boids (Archetypes & Variety)
   // ==========================================
   class Boid {
     constructor(x, y, config) {
       this.pos = new Vec2(x, y);
       const startAngle = Math.random() * Math.PI * 2;
-      this.vel = Vec2.fromAngle(startAngle, config.cruiseSpeed);
       this.acc = new Vec2(0, 0);
 
-      this.traitNoise = 0.92 + Math.random() * 0.16;
-      this.scale = 0.88 + Math.random() * 0.24;
-      this.mass = this.scale;
-      this.personalCruiseSpeed = config.cruiseSpeed * this.traitNoise;
-      this.personalMaxSpeed = config.maxSpeed * this.traitNoise;
-      this.turnAgility = config.maxForce / this.mass;
+      // Diverse Boid Archetypes:
+      // 1. Scout (~25%): Small, nimble, fast, darting, slender needle
+      // 2. Cruiser (~55%): Balanced standard boid, smooth flowing
+      // 3. Leader / Elder (~20%): Large, majestic, high inertia, wide wingspan, guides the flock
+      const r = Math.random();
+      if (r < 0.28) {
+        this.archetype = 'scout';
+        this.scale = 0.65 + Math.random() * 0.18;
+        this.speedFactor = 1.25 + (Math.random() - 0.5) * 0.15;
+        this.agilityFactor = 1.45;
+        this.cohesionFactor = 0.8;
+        this.aspectRatio = 1.35; // Slender, longer needle
+        this.color = `rgba(255, 255, 255, ${0.8 + Math.random() * 0.2})`; // Crisp bright white
+      } else if (r < 0.82) {
+        this.archetype = 'cruiser';
+        this.scale = 0.95 + Math.random() * 0.22;
+        this.speedFactor = 1.0 + (Math.random() - 0.5) * 0.15;
+        this.agilityFactor = 1.0;
+        this.cohesionFactor = 1.0;
+        this.aspectRatio = 1.0; // Standard classic delta
+        this.color = `rgba(215, 225, 238, ${0.65 + Math.random() * 0.2})`; // Soft silver slate
+      } else {
+        this.archetype = 'leader';
+        this.scale = 1.45 + Math.random() * 0.35;
+        this.speedFactor = 1.08 + (Math.random() - 0.5) * 0.1;
+        this.agilityFactor = 0.65; // High mass & inertia: stately turns
+        this.cohesionFactor = 1.35;
+        this.aspectRatio = 0.82; // Wider delta wingspan
+        this.color = `rgba(168, 185, 208, ${0.85 + Math.random() * 0.15})`; // Titanium slate
+      }
 
+      this.mass = this.scale * this.scale;
+      this.personalCruiseSpeed = config.cruiseSpeed * this.speedFactor;
+      this.personalMaxSpeed = config.maxSpeed * this.speedFactor;
+      this.turnAgility = (config.maxForce * this.agilityFactor) / this.scale;
+
+      this.vel = Vec2.fromAngle(startAngle, this.personalCruiseSpeed);
       this.burstTimer = 0;
       this.isPanicking = false;
-
-      // Subtle muted shade: clean monochrome/silver with slight brightness variation
-      const lightness = 65 + Math.random() * 25;
-      this.color = `rgba(220, 226, 235, ${0.45 + (lightness / 100) * 0.4})`;
-      this.accentColor = `rgba(241, 245, 249, 0.95)`;
     }
 
     applyForce(force) {
@@ -229,13 +251,12 @@
 
       const rRepSq = (config.repulseRadius * this.scale) ** 2;
       const rOriSq = (config.orientRadius * this.scale) ** 2;
-      const rAttSq = (config.attractRadius * this.scale) ** 2;
+      const rAttSq = (config.attractRadius * this.scale * this.cohesionFactor) ** 2;
 
       for (let i = 0; i < neighbors.length; i++) {
         const other = neighbors[i];
         if (other === this) continue;
 
-        // Toroidal displacement vector
         const toOther = Vec2.toroidalDelta(other.pos, this.pos, w, h);
         const dSq = toOther.magSq();
         if (dSq > rAttSq) continue;
@@ -280,7 +301,7 @@
         attractForce.div(attractCount);
         const desired = attractForce.setMag(this.personalCruiseSpeed);
         const steer = Vec2.sub(desired, this.vel).limit(this.turnAgility * 0.9);
-        this.applyForce(steer.mult(config.weightAttraction));
+        this.applyForce(steer.mult(config.weightAttraction * this.cohesionFactor));
       }
     }
 
@@ -317,7 +338,7 @@
         const d = Math.sqrt(closestDistSq);
         if (d < 8 * this.scale) {
           closest.food.life -= 0.6;
-          this.burstTimer = 15;
+          this.burstTimer = 16;
         }
         const desired = closest.delta.copy().setMag(this.personalCruiseSpeed * 1.3);
         const steer = Vec2.sub(desired, this.vel).limit(this.turnAgility * 1.2);
@@ -346,7 +367,7 @@
         while (sideAngle < -Math.PI) sideAngle += Math.PI * 2;
 
         panicFlee.rotate(sideAngle >= 0 ? 0.75 : -0.75);
-        panicFlee.setMag(this.personalMaxSpeed * 1.4);
+        panicFlee.setMag(this.personalMaxSpeed * 1.45);
 
         const steer = Vec2.sub(panicFlee, this.vel).limit(this.turnAgility * 2.6);
         this.applyForce(steer.mult(2.4));
@@ -374,9 +395,7 @@
       this.pos.add(this.vel);
       this.acc.set(0, 0);
 
-      // ==========================================
-      // Toroidal Screen Wrapping
-      // ==========================================
+      // Toroidal wrapping
       if (this.pos.x < 0) this.pos.x += w;
       else if (this.pos.x >= w) this.pos.x -= w;
 
@@ -385,24 +404,24 @@
     }
 
     /**
-     * Minimalist Geometric Silhouette: Sleek tapered boid triangle
+     * Minimalist Geometric Silhouette with Archetype Variations
      */
     draw(ctx, showDebug = false) {
       const angle = this.vel.heading();
       const s = this.scale;
-      const len = 10 * s;
-      const width = 4.2 * s;
+      const len = 10 * s * this.aspectRatio;
+      const width = (4.2 * s) / Math.sqrt(this.aspectRatio);
 
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
       ctx.rotate(angle);
 
-      // Sleek minimal triangle boid
+      // Sleek tapered boid triangle
       ctx.beginPath();
-      ctx.moveTo(len, 0);               // Nose
-      ctx.lineTo(-len * 0.65, -width);  // Left wing
-      ctx.lineTo(-len * 0.35, 0);       // Inner notch
-      ctx.lineTo(-len * 0.65, width);   // Right wing
+      ctx.moveTo(len, 0);
+      ctx.lineTo(-len * 0.65, -width);
+      ctx.lineTo(-len * 0.35, 0);
+      ctx.lineTo(-len * 0.65, width);
       ctx.closePath();
 
       ctx.fillStyle = this.isPanicking ? '#ffffff' : this.color;
@@ -412,13 +431,12 @@
       ctx.beginPath();
       ctx.moveTo(len * 0.8, 0);
       ctx.lineTo(-len * 0.3, 0);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = this.archetype === 'leader' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = this.archetype === 'leader' ? 1.4 : 0.9;
       ctx.stroke();
 
       ctx.restore();
 
-      // Minimalist Debug Overlays
       if (showDebug) {
         ctx.beginPath();
         ctx.arc(this.pos.x, this.pos.y, 24 * s, 0, Math.PI * 2);
@@ -448,7 +466,7 @@
       this.vel = new Vec2(1.5, 0);
       this.acc = new Vec2(0, 0);
       this.active = false;
-      this.threatRadius = 140;
+      this.threatRadius = 145;
       this.maxCruiseSpeed = 2.4;
       this.maxStrikeSpeed = 4.4;
       this.maxForce = 0.12;
@@ -472,7 +490,6 @@
           this.applyForce(steer);
         }
       } else {
-        // Hunt closest boid toroidally
         let closest = null;
         let closestDistSq = Infinity;
         for (let i = 0; i < school.length; i += 3) {
@@ -496,7 +513,6 @@
       this.pos.add(this.vel);
       this.acc.set(0, 0);
 
-      // Toroidal wrap
       if (this.pos.x < 0) this.pos.x += w;
       else if (this.pos.x >= w) this.pos.x -= w;
       if (this.pos.y < 0) this.pos.y += h;
@@ -511,7 +527,6 @@
       ctx.translate(this.pos.x, this.pos.y);
       ctx.rotate(angle);
 
-      // Sleek, minimal dark wedge
       ctx.beginPath();
       ctx.moveTo(18, 0);
       ctx.lineTo(-12, -7);
@@ -672,14 +687,12 @@
       const w = this.width;
       const h = this.height;
 
-      // Update food
       for (let i = this.foodPellets.length - 1; i >= 0; i--) {
         const food = this.foodPellets[i];
         food.update(w, h);
         if (food.life <= 0) this.foodPellets.splice(i, 1);
       }
 
-      // Update predator
       if (this.predator.active) {
         if (this.mouseMode === 'predator' && this.isMouseDown) {
           this.predator.followMouse = true;
@@ -690,7 +703,6 @@
         this.predator.update(this.boids, w, h, this.obstacles);
       }
 
-      // Update boids
       let sumVel = new Vec2(0, 0);
       for (let i = 0; i < this.boids.length; i++) {
         const boid = this.boids[i];
@@ -705,7 +717,6 @@
 
       this.polarization = this.boids.length > 0 ? (sumVel.mag() / this.boids.length) : 0;
 
-      // FPS
       this.frameCount++;
       const now = performance.now();
       if (now - this.fpsTimer >= 500) {
@@ -717,27 +728,21 @@
 
     draw() {
       const ctx = this.ctx;
-
-      // Clean, elegant deep matte background
       ctx.fillStyle = '#0b0f19';
       ctx.fillRect(0, 0, this.width, this.height);
 
-      // Minimalist Obstacles
       for (const obs of this.obstacles) {
         obs.draw(ctx, this.showDebug);
       }
 
-      // Food pellets
       for (const food of this.foodPellets) {
         food.draw(ctx);
       }
 
-      // Boids
       for (let i = 0; i < this.boids.length; i++) {
         this.boids[i].draw(ctx, i === 0 && this.showDebug);
       }
 
-      // Predator
       if (this.predator.active) {
         this.predator.draw(ctx, this.showDebug);
       }
