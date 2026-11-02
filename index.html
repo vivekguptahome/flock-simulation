@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flock Simulation — Minimalist Toroidal Boids</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Simulation Canvas -->
+  <canvas id="sim-canvas"></canvas>
+
+  <!-- Metrics -->
+  <div class="stats-bar">
+    <div class="stat-chip">FPS: <strong id="stat-fps">60</strong></div>
+    <div class="stat-chip">Boids: <strong id="stat-count">180</strong></div>
+    <div class="stat-chip">Polarization: <strong id="stat-polar">85%</strong></div>
+  </div>
+
+  <!-- Mouse Tool Dock -->
+  <div class="toolbar-dock">
+    <button class="tool-btn active" data-tool="food">Attract / Food</button>
+    <button class="tool-btn" data-tool="predator">Scatter / Predator</button>
+  </div>
+
+  <!-- Toggle HUD Button -->
+  <button id="toggle-panel-btn" class="hud-toggle-btn">✕ Close</button>
+
+  <!-- Control HUD Panel -->
+  <div id="hud-panel" class="hud-panel">
+    <div class="hud-header">
+      <div class="hud-title">Flock Configuration</div>
+    </div>
+
+    <!-- Presets -->
+    <div class="hud-section">
+      <div class="section-label">Presets</div>
+      <div class="presets-grid">
+        <button class="preset-btn active" data-preset="calm">Calm Stream</button>
+        <button class="preset-btn" data-preset="vortex">Swirling Mill</button>
+        <button class="preset-btn" data-preset="shark">Predator Evasion</button>
+        <button class="preset-btn" data-preset="feeding">Foraging</button>
+      </div>
+    </div>
+
+    <!-- Couzin Sensory Zones -->
+    <div class="hud-section">
+      <div class="section-label">Sensory Zones</div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Repulsion Radius</span>
+          <span id="val-repulse" class="control-val">24px</span>
+        </div>
+        <input type="range" id="slider-repulse" min="10" max="50" value="24">
+      </div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Orientation Radius</span>
+          <span id="val-orient" class="control-val">65px</span>
+        </div>
+        <input type="range" id="slider-orient" min="30" max="120" value="65">
+      </div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Attraction Radius</span>
+          <span id="val-attract" class="control-val">130px</span>
+        </div>
+        <input type="range" id="slider-attract" min="50" max="220" value="130">
+      </div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Blind Spot Cone</span>
+          <span id="val-blind" class="control-val">75°</span>
+        </div>
+        <input type="range" id="slider-blind" min="0" max="150" value="75">
+      </div>
+    </div>
+
+    <!-- Force Weights -->
+    <div class="hud-section">
+      <div class="section-label">Force Weights</div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Repulsion Weight</span>
+          <span id="val-weight-repulse" class="control-val">1.8</span>
+        </div>
+        <input type="range" id="slider-weight-repulse" min="0.2" max="4.0" step="0.1" value="1.8">
+      </div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Orientation Weight</span>
+          <span id="val-weight-orient" class="control-val">1.1</span>
+        </div>
+        <input type="range" id="slider-weight-orient" min="0.0" max="3.0" step="0.1" value="1.1">
+      </div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Attraction Weight</span>
+          <span id="val-weight-attract" class="control-val">0.9</span>
+        </div>
+        <input type="range" id="slider-weight-attract" min="0.0" max="3.0" step="0.1" value="0.9">
+      </div>
+    </div>
+
+    <!-- Locomotion -->
+    <div class="hud-section">
+      <div class="section-label">Kinematics</div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Cruise Speed</span>
+          <span id="val-speed" class="control-val">2.2</span>
+        </div>
+        <input type="range" id="slider-speed" min="1.0" max="5.0" step="0.1" value="2.2">
+      </div>
+
+      <div class="control-row">
+        <div class="control-label-row">
+          <span>Boid Count</span>
+          <span id="val-count" class="control-val">180</span>
+        </div>
+        <input type="range" id="slider-count" min="20" max="400" step="10" value="180">
+      </div>
+    </div>
+
+    <!-- Overlays -->
+    <div class="hud-section">
+      <div class="section-label">Overlays</div>
+
+      <div class="toggle-row">
+        <span>Sensory Zones (Lead Boid)</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-debug">
+          <span class="slider-switch"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <span>Predator Entity</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-predator">
+          <span class="slider-switch"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
